@@ -67,16 +67,31 @@ Blast Radius Analyzer is a **custom agent** on the GitLab Duo Agent Platform. It
 
 ### Run Locally
 
-```bash
-# Install Orbit CLI
-curl -fsSL "https://gitlab.com/gitlab-org/orbit/knowledge-graph/-/raw/main/install.sh" | bash
+The repo ships a real local engine (`blast_radius/`) that wraps the Orbit CLI
+and implements cycle-safe, depth-limited traversal with deterministic risk
+scoring. It has zero third-party runtime dependencies.
 
-# Index your project
+```bash
+# 1. Install the local engine
+pip install -e .
+
+# 2. Install the Orbit CLI from a pinned release (do NOT pipe curl to bash from
+#    a mutable branch). Use the official package or a versioned release asset:
+#    https://gitlab.com/gitlab-org/orbit/knowledge-graph/-/releases
+#    e.g. download the release for your platform, verify its checksum, then:
+#    chmod +x orbit && sudo mv orbit /usr/local/bin/
+
+# 3. Index your project
 orbit index /path/to/your/project
 
-# Query blast radius manually
-orbit sql "SELECT t2.name FROM gl_definition t1 JOIN gl_reference ON t1.id = gl_reference.target_id JOIN gl_definition t2 ON gl_reference.source_id = t2.id WHERE t1.path LIKE '%auth.py'"
+# 4. Analyze blast radius
+blast-radius src/auth/tokens.py --function checkToken
+#   or, fully offline against a graph fixture (no Orbit needed):
+blast-radius src/auth/tokens.py --graph tests/fixtures/sample_graph.json --json
 ```
+
+Configuration is read from `.env` (see `.env.example`): Orbit mode, CLI path,
+max traversal depth, risk thresholds, and exclude patterns.
 
 ## Repository Structure
 
@@ -84,15 +99,27 @@ orbit sql "SELECT t2.name FROM gl_definition t1 JOIN gl_reference ON t1.id = gl_
 blast-radius-agent/
 ├── README.md                    # This file
 ├── AGENTS.md                    # Context for AI agents working on this project
+├── agent.yml                    # Deployable GitLab Duo agent manifest
+├── pyproject.toml               # Package metadata + `blast-radius` entrypoint
+├── blast_radius/                # Local engine (Orbit CLI wrapper, traversal, risk)
+│   ├── cli.py                   # `blast-radius` / `python -m blast_radius`
+│   ├── engine.py                # Cycle-safe, depth-limited traversal
+│   ├── orbit_client.py          # Orbit CLI + in-memory fixture clients
+│   ├── risk.py                  # Deterministic risk classification
+│   └── config.py                # .env-driven configuration
 ├── skills/
 │   └── blast-radius/
 │       └── SKILL.md             # Reusable blast-radius agent skill
 ├── docs/
 │   ├── ARCHITECTURE.md          # Architecture diagrams and flow
+│   ├── ORBIT_CONTRACT.md        # Orbit/Duo tool contract (SQL vs Cypher modes)
 │   └── SUBMISSION.md            # Devpost submission content
+├── scripts/
+│   └── validate_skill.py        # CI validation for skill/manifest/fixture
+├── tests/                       # pytest suite + graph fixture
 ├── demo/
 │   ├── demo_script.md           # 3-minute video script
-│   └── demo_terminal.html       # Terminal simulation for demo video
+│   └── demo_terminal.html       # Terminal SIMULATION for demo video
 └── assets/
     └── thumbnail.png            # Architecture diagram thumbnail
 ```

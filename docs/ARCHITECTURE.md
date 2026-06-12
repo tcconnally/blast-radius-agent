@@ -107,28 +107,52 @@ Orbit represents code as a graph:
 
 ## Blast Radius Traversal Algorithm
 
+Corrected, cycle-safe BFS. `visited` is seeded with the target **and** every
+node is added to `visited` as soon as it is discovered, before recursing, so a
+node is never counted twice and cycles cannot loop forever (issue #8). The
+reference implementation is `blast_radius/engine.py`, covered by
+`tests/test_engine.py`.
+
 ```
-function blast_radius(target_path, max_depth=3):
-    target = query_graph("MATCH (d:gl_definition) WHERE d.path CONTAINS target_path")
-    
-    direct = query_graph("MATCH (s)-[r:gl_reference]->(d) WHERE d.id = target.id")
-    
-    transitive = []
-    visited = {target.id}
-    current_level = {ref.source_id for ref in direct}
-    
-    for depth in 2..max_depth:
-        next_level = query_graph(
-            "MATCH (s)-[r:gl_reference]->(d) WHERE d.id IN current_level"
-        )
-        transitive.extend(next_level)
-        current_level = {ref.source_id for ref in next_level} - visited
-        visited |= current_level
-    
-    projects = distinct_project_paths(direct + transitive)
-    
-    return classify_risk(direct, transitive, projects)
+function blast_radius(target_path, function_name=None, max_depth=3):
+    # Exact-aware resolution; raise on zero matches, or on multiple files
+    # when no function name was given to disambiguate (issue #7).
+    targets = resolve_target(target_path, function_name)
+    target_ids = {t.id for t in targets}
+
+    visited = set(target_ids)        # seed with the target(s)
+    direct, transitive = [], []
+
+    # Level 1 — direct dependents (reverse gl_reference edges).
+    frontier = set()
+    for dep in dependents_of(target_ids):
+        if dep.id in visited or excluded(dep.path):
+            continue
+        visited.add(dep.id)          # mark before recursing
+        frontier.add(dep.id)
+        direct.append(dep)
+
+    # Levels 2..max_depth — transitive dependents.
+    depth = 2
+    while frontier and depth <= max_depth:
+        next_frontier = set()
+        for dep in dependents_of(frontier):
+            if dep.id in visited or excluded(dep.path):
+                continue
+            visited.add(dep.id)
+            next_frontier.add(dep.id)
+            transitive.append((dep, depth))
+        frontier = next_frontier
+        depth += 1
+
+    projects = distinct_project_paths(direct + [d for d, _ in transitive])
+    return classify_risk(len(direct), len(transitive), len(projects))
 ```
+
+> **Note on dialects (issue #2):** the sequence diagram above shows Cypher-style
+> `query_graph` calls used in **Remote** mode. In **Local** mode the engine emits
+> the SQL shown in the skill via `orbit sql`. See `docs/ORBIT_CONTRACT.md` for
+> the full contract and which dialect applies where.
 
 ## Deployment
 
