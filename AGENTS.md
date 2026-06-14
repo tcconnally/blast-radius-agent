@@ -66,7 +66,12 @@ Organize your response as:
 - RISK SCORE: Low/Medium/High/Critical based on dependency depth
 ```
 
-**Tools Enabled:** Create issue comment (to post findings)
+**Tools Enabled:** Create Issue Note (to post findings)
+
+## Agent URL
+
+The agent is published at:
+https://gitlab.com/gitlab-ai-hackathon/transcend/39104977/-/automate/agents/1010753/
 
 ## Skill
 
