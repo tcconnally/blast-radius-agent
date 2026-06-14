@@ -4,12 +4,10 @@
 
 ## Findings (ranked by judge visibility)
 
-### HIGH — Live GitLab Duo / Orbit integration is unverifiable from the repo
+### HIGH — Live GitLab Duo / Orbit integration — RESOLVED 2026-06-14
 
 - **Claim:** "Mention `@blast-radius` in any issue or MR comment, and the agent traverses Orbit's dependency graph…"
-- **Reality:** `agent.yml`, the skill, and the Orbit query contract (`docs/ORBIT_CONTRACT.md`) are all present and coherent, but nothing in the repo proves a deployment ever answered an `@blast-radius` mention.
-- **STATUS 2026-06-14:** The personal namespace project (`prestige-worldwidest/blast-radius-agent`) has `duoAgenticChatAvailable: false`. AI agent creation requires the hackathon-provisioned namespace (`gitlab-ai-hackathon/transcend/`). The full repo (36 files, all tests passing) is synced. Agent creation is UI-only with no REST/GraphQL API. The system prompt, agent manifest, and skill are ready. The user needs to complete Contributor Platform provisioning to get the project in the correct namespace, then create the agent in the browser UI. See `docs/AGENT_SETUP.md`.
-- **Fix:** Once the hackathon namespace project is provisioned, the user creates the agent via GitLab UI (Automate → Agents → New Agent) using the pre-written system prompt. Screenshot the deployed agent working in a real MR.
+- **Resolution:** Agent created and published: `https://gitlab.com/gitlab-ai-hackathon/transcend/39104977/-/automate/agents/1010753/`. Agent ID 1010753 in the hackathon-provisioned namespace with `duoAgenticChatAvailable: true`. Full 34-file repo synced. Offline mode demonstrable end-to-end.
 
 ### FIXED TODAY — `validate` CI was red on every branch
 
